@@ -54,13 +54,13 @@ func main() {
 
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", seniorityHost, seniorityPort),
-		grpc.WithInsecure(), grpc.WithBlock(),
+		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
 	)
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("connecting to seniority service: %v", err)
 	}
 	defer conn.Close()
-	c := pb.NewSeniorityClient(conn)
+	seniority := pb.NewSeniorityClient(conn)
 
 	fakeTitleHandler := func(w http.ResponseWriter, r *http.Request) {
 		_, span := tr.Start(r.Context(), "serve-http-request")
@@ -69,13 +69,13 @@ func main() {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		seniority, err := c.GetSeniority(ctx, &pb.SeniorityRequest{})
+		sr, err := seniority.GetSeniority(ctx, &pb.SeniorityRequest{})
 		if err != nil {
 			log.Printf("seniority request: %v", err)
 			http.Error(w, "Error getting seniority", 500)
 		}
 
-		w.Write([]byte(fmt.Sprintf("%s", seniority.Seniority)))
+		w.Write([]byte(fmt.Sprintf("%s", sr.Seniority)))
 	}
 
 	http.HandleFunc("/", fakeTitleHandler)
