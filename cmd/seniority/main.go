@@ -4,8 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net/http"
-	"time"
+	"net"
 
 	pb "github.com/johananl/otel-demo/proto/seniority"
 	"go.opentelemetry.io/otel/api/core"
@@ -16,11 +15,20 @@ import (
 	"google.golang.org/grpc"
 )
 
+type server struct {
+	pb.UnimplementedSeniorityServer
+}
+
+func (s *server) GetSeniority(ctx context.Context, in *pb.SeniorityRequest) (*pb.SeniorityReply, error) {
+	log.Println("Received seniority request")
+	return &pb.SeniorityReply{Seniority: "senior"}, nil
+}
+
 func initTracer() {
 	exporter, err := jaeger.NewExporter(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
-			ServiceName: "frontend",
+			ServiceName: "backend",
 			Tags: []core.KeyValue{
 				key.String("exporter", "jaeger"),
 			},
@@ -43,49 +51,29 @@ func initTracer() {
 
 func main() {
 	initTracer()
-	tr := global.TraceProvider().Tracer("frontend")
+	// tr := global.TraceProvider().Tracer("backend")
 
 	host := "localhost"
-	port := 8080
+	port := 9090
 	addr := fmt.Sprintf("%s:%d", host, port)
 
-	seniorityHost := "localhost"
-	seniorityPort := 9090
-
-	conn, err := grpc.Dial(
-		fmt.Sprintf("%s:%d", seniorityHost, seniorityPort),
-		grpc.WithInsecure(), grpc.WithBlock(),
-	)
+	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("cannot listen: %v", err)
 	}
-	defer conn.Close()
-	c := pb.NewSeniorityClient(conn)
-
-	fakeTitleHandler := func(w http.ResponseWriter, r *http.Request) {
-		_, span := tr.Start(r.Context(), "serve-http-request")
-		defer span.End()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
-
-		seniority, err := c.GetSeniority(ctx, &pb.SeniorityRequest{})
-		if err != nil {
-			log.Printf("seniority request: %v", err)
-			http.Error(w, "Error getting seniority", 500)
-		}
-
-		w.Write([]byte(fmt.Sprintf("%s", seniority.Seniority)))
-	}
-
-	http.HandleFunc("/", fakeTitleHandler)
+	// TODO: Add interceptor to NewServer():
+	// https://github.com/open-telemetry/opentelemetry-go/blob/09ae5378b779f2bc8b1aa401a9e321b1e9aaf6aa/example/grpc/server/main.go#L53
+	s := grpc.NewServer()
+	pb.RegisterSeniorityServer(s, &server{})
 
 	ch := make(chan struct{})
 	go func(ch chan struct{}) {
-		log.Fatal(http.ListenAndServe(addr, nil))
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("failed to serve: %v", err)
+		}
 		ch <- struct{}{}
 	}(ch)
-	log.Printf("Listening for HTTP requests on port %d", port)
+	log.Printf("Listening for gRPC connections on port %d", port)
 
 	<-ch
 }

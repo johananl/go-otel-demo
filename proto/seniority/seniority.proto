@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package seniority;
+
+service Seniority {
+  rpc GetSeniority (SeniorityRequest) returns (SeniorityReply) {}
+}
+
+message SeniorityRequest {}
+
+message SeniorityReply {
+  string seniority = 1;
+}
