@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 
+	"github.com/johananl/otel-demo/pkg/seniority"
 	pb "github.com/johananl/otel-demo/proto/seniority"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
@@ -28,7 +29,7 @@ func initTracer() {
 	exporter, err := jaeger.NewExporter(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
-			ServiceName: "backend",
+			ServiceName: "seniority",
 			Tags: []core.KeyValue{
 				key.String("exporter", "jaeger"),
 			},
@@ -51,7 +52,6 @@ func initTracer() {
 
 func main() {
 	initTracer()
-	// tr := global.TraceProvider().Tracer("backend")
 
 	host := "localhost"
 	port := 9090
@@ -63,7 +63,7 @@ func main() {
 	}
 	// TODO: Add interceptor to NewServer():
 	// https://github.com/open-telemetry/opentelemetry-go/blob/09ae5378b779f2bc8b1aa401a9e321b1e9aaf6aa/example/grpc/server/main.go#L53
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.UnaryInterceptor(seniority.UnaryServerInterceptor))
 	pb.RegisterSeniorityServer(s, &server{})
 
 	ch := make(chan struct{})

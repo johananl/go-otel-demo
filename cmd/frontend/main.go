@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/johananl/otel-demo/pkg/seniority"
 	pb "github.com/johananl/otel-demo/proto/seniority"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
@@ -55,6 +56,7 @@ func main() {
 	conn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", seniorityHost, seniorityPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
+		grpc.WithUnaryInterceptor(seniority.UnaryClientInterceptor),
 	)
 	if err != nil {
 		log.Fatalf("connecting to seniority service: %v", err)
