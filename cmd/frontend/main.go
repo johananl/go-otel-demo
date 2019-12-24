@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -65,11 +64,8 @@ func main() {
 	seniority := pb.NewSeniorityClient(conn)
 
 	fakeTitleHandler := func(w http.ResponseWriter, r *http.Request) {
-		_, span := tr.Start(r.Context(), "serve-http-request")
+		ctx, span := tr.Start(r.Context(), "serve-http-request")
 		defer span.End()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-		defer cancel()
 
 		sr, err := seniority.GetSeniority(ctx, &pb.SeniorityRequest{})
 		if err != nil {
