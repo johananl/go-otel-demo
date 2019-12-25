@@ -51,7 +51,6 @@ func main() {
 
 	host := "localhost"
 	port := 8080
-	addr := fmt.Sprintf("%s:%d", host, port)
 
 	seniorityHost := "localhost"
 	seniorityPort := 9090
@@ -125,6 +124,7 @@ func main() {
 
 	http.HandleFunc("/", fakeTitleHandler)
 
+	addr := fmt.Sprintf("%s:%d", host, port)
 	ch := make(chan struct{})
 	go func(ch chan struct{}) {
 		log.Fatal(http.ListenAndServe(addr, nil))
