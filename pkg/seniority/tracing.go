@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UnaryServerInterceptor intercepts and extracts incoming trace data
+// UnaryServerInterceptor intercepts and extracts incoming trace data.
 func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	requestMetadata, _ := metadata.FromIncomingContext(ctx)
 	metadataCopy := requestMetadata.Copy()
@@ -43,7 +43,7 @@ func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.Una
 	return handler(ctx, req)
 }
 
-// UnaryClientInterceptor intercepts and injects outgoing trace
+// UnaryClientInterceptor intercepts and injects outgoing trace data.
 func UnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 	metadataCopy := requestMetadata.Copy()
