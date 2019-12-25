@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/johananl/otel-demo/pkg/field"
+	"github.com/johananl/otel-demo/pkg/role"
 	"github.com/johananl/otel-demo/pkg/seniority"
 	fieldpb "github.com/johananl/otel-demo/proto/field"
+	rolepb "github.com/johananl/otel-demo/proto/role"
 	senioritypb "github.com/johananl/otel-demo/proto/seniority"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
@@ -57,6 +59,9 @@ func main() {
 	fieldHost := "localhost"
 	fieldPort := 9091
 
+	roleHost := "localhost"
+	rolePort := 9092
+
 	sConn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", seniorityHost, seniorityPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
@@ -81,6 +86,18 @@ func main() {
 	field := fieldpb.NewFieldClient(fConn)
 	log.Printf("Connected to field service at %s:%d\n", fieldHost, fieldPort)
 
+	rConn, err := grpc.Dial(
+		fmt.Sprintf("%s:%d", roleHost, rolePort),
+		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
+		grpc.WithUnaryInterceptor(role.UnaryClientInterceptor),
+	)
+	if err != nil {
+		log.Fatalf("connecting to role service: %v", err)
+	}
+	defer rConn.Close()
+	role := rolepb.NewRoleClient(rConn)
+	log.Printf("Connected to role service at %s:%d\n", roleHost, rolePort)
+
 	fakeTitleHandler := func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := tr.Start(r.Context(), "serve-http-request")
 		defer span.End()
@@ -97,7 +114,13 @@ func main() {
 			http.Error(w, "Error getting field", 500)
 		}
 
-		w.Write([]byte(fmt.Sprintf("%s %s", sr.Seniority, fr.Field)))
+		rr, err := role.GetRole(ctx, &rolepb.RoleRequest{})
+		if err != nil {
+			log.Printf("field request: %v", err)
+			http.Error(w, "Error getting role", 500)
+		}
+
+		w.Write([]byte(fmt.Sprintf("%s %s %s", sr.Seniority, fr.Field, rr.Role)))
 	}
 
 	http.HandleFunc("/", fakeTitleHandler)
