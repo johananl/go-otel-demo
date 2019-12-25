@@ -61,8 +61,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("cannot listen: %v", err)
 	}
-	// TODO: Add interceptor to NewServer():
-	// https://github.com/open-telemetry/opentelemetry-go/blob/09ae5378b779f2bc8b1aa401a9e321b1e9aaf6aa/example/grpc/server/main.go#L53
 	s := grpc.NewServer(grpc.UnaryInterceptor(seniority.UnaryServerInterceptor))
 	pb.RegisterSeniorityServer(s, &server{})
 
