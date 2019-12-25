@@ -68,7 +68,7 @@ func main() {
 		log.Fatalf("connecting to seniority service: %v", err)
 	}
 	defer sConn.Close()
-	seniority := senioritypb.NewSeniorityClient(sConn)
+	seniorityClient := senioritypb.NewSeniorityClient(sConn)
 	log.Printf("Connected to seniority service at %s:%d\n", seniorityHost, seniorityPort)
 
 	fConn, err := grpc.Dial(
@@ -80,7 +80,7 @@ func main() {
 		log.Fatalf("connecting to field service: %v", err)
 	}
 	defer fConn.Close()
-	field := fieldpb.NewFieldClient(fConn)
+	fieldClient := fieldpb.NewFieldClient(fConn)
 	log.Printf("Connected to field service at %s:%d\n", fieldHost, fieldPort)
 
 	rConn, err := grpc.Dial(
@@ -92,36 +92,76 @@ func main() {
 		log.Fatalf("connecting to role service: %v", err)
 	}
 	defer rConn.Close()
-	role := rolepb.NewRoleClient(rConn)
+	roleClient := rolepb.NewRoleClient(rConn)
 	log.Printf("Connected to role service at %s:%d\n", roleHost, rolePort)
 
 	fakeTitleHandler := func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := tr.Start(r.Context(), "serve-http-request")
 		defer span.End()
 
+		var seniority string
+		var field string
+		var role string
+
+		errChan := make(chan error)
+
 		// Get seniority.
-		sr, err := seniority.GetSeniority(ctx, &senioritypb.SeniorityRequest{})
-		if err != nil {
-			log.Printf("seniority request: %v", err)
-			http.Error(w, "Error getting seniority", 500)
-		}
+		sChan := make(chan *senioritypb.SeniorityReply)
+		go func(reply chan<- *senioritypb.SeniorityReply, errChan chan<- error) {
+			defer close(reply)
+
+			r, err := seniorityClient.GetSeniority(ctx, &senioritypb.SeniorityRequest{})
+			if err != nil {
+				errChan <- fmt.Errorf("getting seniority: %v", err)
+				return
+			}
+
+			reply <- r
+		}(sChan, errChan)
 
 		// Get field.
-		fr, err := field.GetField(ctx, &fieldpb.FieldRequest{})
-		if err != nil {
-			log.Printf("field request: %v", err)
-			http.Error(w, "Error getting field", 500)
-		}
+		fChan := make(chan *fieldpb.FieldReply)
+		go func(reply chan<- *fieldpb.FieldReply, errChan chan<- error) {
+			defer close(reply)
+
+			r, err := fieldClient.GetField(ctx, &fieldpb.FieldRequest{})
+			if err != nil {
+				errChan <- fmt.Errorf("getting field: %v", err)
+				return
+			}
+
+			reply <- r
+		}(fChan, errChan)
 
 		// Get role.
-		rr, err := role.GetRole(ctx, &rolepb.RoleRequest{})
-		if err != nil {
-			log.Printf("field request: %v", err)
-			http.Error(w, "Error getting role", 500)
+		rChan := make(chan *rolepb.RoleReply)
+		go func(reply chan<- *rolepb.RoleReply, errChan chan<- error) {
+			defer close(reply)
+
+			r, err := roleClient.GetRole(ctx, &rolepb.RoleRequest{})
+			if err != nil {
+				errChan <- fmt.Errorf("getting role: %v", err)
+				return
+			}
+
+			reply <- r
+		}(rChan, errChan)
+
+		select {
+		case sr := <-sChan:
+			seniority = sr.Seniority
+		case fr := <-fChan:
+			field = fr.Field
+		case rr := <-rChan:
+			role = rr.Role
+		case err := <-errChan:
+			log.Printf("gRPC error: %v", err)
+			http.Error(w, "Error from backend service", 500)
+			return
 		}
 
 		// Write HTTP response.
-		w.Write([]byte(fmt.Sprintf("%s %s %s", sr.Seniority, fr.Field, rr.Role)))
+		w.Write([]byte(fmt.Sprintf("%s %s %s", seniority, field, role)))
 	}
 
 	http.HandleFunc("/", fakeTitleHandler)
