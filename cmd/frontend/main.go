@@ -54,10 +54,8 @@ func main() {
 
 	seniorityHost := "localhost"
 	seniorityPort := 9090
-
 	fieldHost := "localhost"
 	fieldPort := 9091
-
 	roleHost := "localhost"
 	rolePort := 9092
 
@@ -101,24 +99,28 @@ func main() {
 		ctx, span := tr.Start(r.Context(), "serve-http-request")
 		defer span.End()
 
+		// Get seniority.
 		sr, err := seniority.GetSeniority(ctx, &senioritypb.SeniorityRequest{})
 		if err != nil {
 			log.Printf("seniority request: %v", err)
 			http.Error(w, "Error getting seniority", 500)
 		}
 
+		// Get field.
 		fr, err := field.GetField(ctx, &fieldpb.FieldRequest{})
 		if err != nil {
 			log.Printf("field request: %v", err)
 			http.Error(w, "Error getting field", 500)
 		}
 
+		// Get role.
 		rr, err := role.GetRole(ctx, &rolepb.RoleRequest{})
 		if err != nil {
 			log.Printf("field request: %v", err)
 			http.Error(w, "Error getting role", 500)
 		}
 
+		// Write HTTP response.
 		w.Write([]byte(fmt.Sprintf("%s %s %s", sr.Seniority, fr.Field, rr.Role)))
 	}
 
