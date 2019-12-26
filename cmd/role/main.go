@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/johananl/otel-demo/pkg/role"
+	"github.com/johananl/otel-demo/pkg/middleware/tracing"
 	pb "github.com/johananl/otel-demo/proto/role"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
@@ -61,7 +61,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("cannot listen: %v", err)
 	}
-	s := grpc.NewServer(grpc.UnaryInterceptor(role.UnaryServerInterceptor))
+	s := grpc.NewServer(grpc.UnaryInterceptor(tracing.UnaryServerInterceptor))
 	pb.RegisterRoleServer(s, &server{})
 
 	ch := make(chan struct{})

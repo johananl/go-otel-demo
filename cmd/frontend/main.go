@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/johananl/otel-demo/pkg/field"
-	"github.com/johananl/otel-demo/pkg/role"
-	"github.com/johananl/otel-demo/pkg/seniority"
+	"github.com/johananl/otel-demo/pkg/middleware/tracing"
 	fieldpb "github.com/johananl/otel-demo/proto/field"
 	rolepb "github.com/johananl/otel-demo/proto/role"
 	senioritypb "github.com/johananl/otel-demo/proto/seniority"
@@ -62,7 +60,7 @@ func main() {
 	sConn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", seniorityHost, seniorityPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
-		grpc.WithUnaryInterceptor(seniority.UnaryClientInterceptor),
+		grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor),
 	)
 	if err != nil {
 		log.Fatalf("connecting to seniority service: %v", err)
@@ -74,7 +72,7 @@ func main() {
 	fConn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", fieldHost, fieldPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
-		grpc.WithUnaryInterceptor(field.UnaryClientInterceptor),
+		grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor),
 	)
 	if err != nil {
 		log.Fatalf("connecting to field service: %v", err)
@@ -86,7 +84,7 @@ func main() {
 	rConn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", roleHost, rolePort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
-		grpc.WithUnaryInterceptor(role.UnaryClientInterceptor),
+		grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor),
 	)
 	if err != nil {
 		log.Fatalf("connecting to role service: %v", err)

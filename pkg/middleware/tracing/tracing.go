@@ -1,12 +1,10 @@
-package role
+package tracing
 
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
-	"go.opentelemetry.io/otel/api/key"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/plugin/grpctrace"
 	"google.golang.org/grpc"
@@ -25,16 +23,10 @@ func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.Una
 		MultiKV: entries,
 	}))
 
-	grpcServerKey := key.New("grpc.server")
-	serverSpanAttrs := []core.KeyValue{
-		grpcServerKey.String("hello-world-server"),
-	}
-
-	tr := global.TraceProvider().Tracer("role/grpc")
+	tr := global.TraceProvider().Tracer("")
 	ctx, span := tr.Start(
 		ctx,
 		"handle-grpc-request",
-		trace.WithAttributes(serverSpanAttrs...),
 		trace.ChildOf(spanCtx),
 		trace.WithSpanKind(trace.SpanKindServer),
 	)
@@ -48,7 +40,7 @@ func UnaryClientInterceptor(ctx context.Context, method string, req, reply inter
 	requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 	metadataCopy := requestMetadata.Copy()
 
-	tr := global.TraceProvider().Tracer("role/grpc")
+	tr := global.TraceProvider().Tracer("")
 	err := tr.WithSpan(ctx, "send-grpc-request",
 		func(ctx context.Context) error {
 			grpctrace.Inject(ctx, &metadataCopy)
