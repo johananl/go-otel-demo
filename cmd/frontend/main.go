@@ -108,8 +108,6 @@ func main() {
 		// Get seniority.
 		sChan := make(chan *senioritypb.SeniorityReply)
 		go func(reply chan<- *senioritypb.SeniorityReply, errChan chan<- error) {
-			defer close(reply)
-
 			r, err := seniorityClient.GetSeniority(ctx, &senioritypb.SeniorityRequest{})
 			if err != nil {
 				errChan <- fmt.Errorf("getting seniority: %v", err)
@@ -122,8 +120,6 @@ func main() {
 		// Get field.
 		fChan := make(chan *fieldpb.FieldReply)
 		go func(reply chan<- *fieldpb.FieldReply, errChan chan<- error) {
-			defer close(reply)
-
 			r, err := fieldClient.GetField(ctx, &fieldpb.FieldRequest{})
 			if err != nil {
 				errChan <- fmt.Errorf("getting field: %v", err)
@@ -136,8 +132,6 @@ func main() {
 		// Get role.
 		rChan := make(chan *rolepb.RoleReply)
 		go func(reply chan<- *rolepb.RoleReply, errChan chan<- error) {
-			defer close(reply)
-
 			r, err := roleClient.GetRole(ctx, &rolepb.RoleRequest{})
 			if err != nil {
 				errChan <- fmt.Errorf("getting role: %v", err)
@@ -147,21 +141,24 @@ func main() {
 			reply <- r
 		}(rChan, errChan)
 
-		select {
-		case sr := <-sChan:
-			seniority = sr.Seniority
-		case fr := <-fChan:
-			field = fr.Field
-		case rr := <-rChan:
-			role = rr.Role
-		case err := <-errChan:
-			log.Printf("gRPC error: %v", err)
-			http.Error(w, "Error from backend service", 500)
-			return
+		// Wait for all gRPC calls to return.
+		for seniority == "" || field == "" || role == "" {
+			select {
+			case sr := <-sChan:
+				seniority = sr.Seniority
+			case fr := <-fChan:
+				field = fr.Field
+			case rr := <-rChan:
+				role = rr.Role
+			case err := <-errChan:
+				log.Printf("gRPC error: %v", err)
+				http.Error(w, "Error from backend service", 500)
+				return
+			}
 		}
 
 		// Write HTTP response.
-		w.Write([]byte(fmt.Sprintf("%s %s %s", seniority, field, role)))
+		w.Write([]byte(fmt.Sprintf("%s %s %s\n", seniority, field, role)))
 	}
 
 	http.HandleFunc("/", fakeTitleHandler)
