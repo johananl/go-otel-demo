@@ -22,6 +22,8 @@ var seniorities []string = []string{
 	"senior",
 	"junior",
 	"assistant",
+	"executive",
+	"intergalactic",
 }
 
 type server struct {

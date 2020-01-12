@@ -21,11 +21,17 @@ import (
 var fields []string = []string{
 	"marketing",
 	"dolphin",
+	"cat",
 	"engineering",
 	"aerospace",
 	"machinery",
 	"finance",
 	"strategy",
+	"beer",
+	"coffee",
+	"whisky",
+	"laundry",
+	"socks",
 }
 
 type server struct {

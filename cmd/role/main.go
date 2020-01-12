@@ -27,6 +27,8 @@ var roles []string = []string{
 	"analyst",
 	"engineer",
 	"evangelist",
+	"designer",
+	"plumber",
 }
 
 type server struct {
