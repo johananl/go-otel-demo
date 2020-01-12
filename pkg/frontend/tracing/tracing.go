@@ -3,7 +3,6 @@ package tracing
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/distributedcontext"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/plugin/grpctrace"
@@ -13,34 +12,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// UnaryServerInterceptor intercepts and extracts incoming trace data.
-func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-	requestMetadata, _ := metadata.FromIncomingContext(ctx)
-	metadataCopy := requestMetadata.Copy()
-
-	entries, spanCtx := grpctrace.Extract(ctx, &metadataCopy)
-	ctx = distributedcontext.WithMap(ctx, distributedcontext.NewMap(distributedcontext.MapUpdate{
-		MultiKV: entries,
-	}))
-
-	tr := global.TraceProvider().Tracer("")
-	ctx, span := tr.Start(
-		ctx,
-		"handle-grpc-request",
-		trace.ChildOf(spanCtx),
-		trace.WithSpanKind(trace.SpanKindServer),
-	)
-	defer span.End()
-
-	return handler(ctx, req)
-}
-
 // UnaryClientInterceptor intercepts and injects outgoing trace data.
 func UnaryClientInterceptor(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 	metadataCopy := requestMetadata.Copy()
 
-	tr := global.TraceProvider().Tracer("")
+	tr := global.TraceProvider().Tracer("frontend")
 	err := tr.WithSpan(ctx, "send-grpc-request",
 		func(ctx context.Context) error {
 			grpctrace.Inject(ctx, &metadataCopy)

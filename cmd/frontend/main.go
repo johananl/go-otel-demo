@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/johananl/otel-demo/pkg/middleware/tracing"
+	"github.com/johananl/otel-demo/pkg/frontend/tracing"
 	fieldpb "github.com/johananl/otel-demo/proto/field"
 	rolepb "github.com/johananl/otel-demo/proto/role"
 	senioritypb "github.com/johananl/otel-demo/proto/seniority"

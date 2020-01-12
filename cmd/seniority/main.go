@@ -8,7 +8,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/johananl/otel-demo/pkg/middleware/tracing"
+	"github.com/johananl/otel-demo/pkg/seniority/tracing"
 	pb "github.com/johananl/otel-demo/proto/seniority"
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
