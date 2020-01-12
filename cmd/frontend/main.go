@@ -57,6 +57,7 @@ func main() {
 	roleHost := "localhost"
 	rolePort := 9092
 
+	// Connect to seniority service.
 	sConn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", seniorityHost, seniorityPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
@@ -69,6 +70,7 @@ func main() {
 	seniorityClient := senioritypb.NewSeniorityClient(sConn)
 	log.Printf("Connected to seniority service at %s:%d\n", seniorityHost, seniorityPort)
 
+	// Connect to field service.
 	fConn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", fieldHost, fieldPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
@@ -81,6 +83,7 @@ func main() {
 	fieldClient := fieldpb.NewFieldClient(fConn)
 	log.Printf("Connected to field service at %s:%d\n", fieldHost, fieldPort)
 
+	// Connect to role service.
 	rConn, err := grpc.Dial(
 		fmt.Sprintf("%s:%d", roleHost, rolePort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
