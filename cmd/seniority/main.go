@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"time"
 
 	"github.com/johananl/otel-demo/pkg/middleware/tracing"
 	pb "github.com/johananl/otel-demo/proto/seniority"
@@ -16,13 +18,21 @@ import (
 	"google.golang.org/grpc"
 )
 
+var seniorities []string = []string{
+	"senior",
+	"junior",
+	"assistant",
+}
+
 type server struct {
 	pb.UnimplementedSeniorityServer
 }
 
 func (s *server) GetSeniority(ctx context.Context, in *pb.SeniorityRequest) (*pb.SeniorityReply, error) {
 	log.Println("Received seniority request")
-	return &pb.SeniorityReply{Seniority: "senior"}, nil
+	selected := seniorities[rand.Intn(len(seniorities))]
+
+	return &pb.SeniorityReply{Seniority: selected}, nil
 }
 
 func initTracer() {
@@ -52,6 +62,8 @@ func initTracer() {
 
 func main() {
 	initTracer()
+
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	host := "localhost"
 	port := 9090

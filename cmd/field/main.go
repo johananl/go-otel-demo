@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"time"
 
 	"github.com/johananl/otel-demo/pkg/middleware/tracing"
 	pb "github.com/johananl/otel-demo/proto/field"
@@ -16,13 +18,26 @@ import (
 	"google.golang.org/grpc"
 )
 
+var fields []string = []string{
+	"marketing",
+	"dolphin",
+	"engineering",
+	"aerospace",
+	"machinery",
+	"finance",
+	"strategy",
+}
+
 type server struct {
 	pb.UnimplementedFieldServer
 }
 
 func (s *server) GetField(ctx context.Context, in *pb.FieldRequest) (*pb.FieldReply, error) {
 	log.Println("Received field request")
-	return &pb.FieldReply{Field: "marketing"}, nil
+
+	selected := fields[rand.Intn(len(fields))]
+
+	return &pb.FieldReply{Field: selected}, nil
 }
 
 func initTracer() {
@@ -52,6 +67,8 @@ func initTracer() {
 
 func main() {
 	initTracer()
+
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	host := "localhost"
 	port := 9091

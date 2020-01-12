@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
+	"time"
 
 	"github.com/johananl/otel-demo/pkg/middleware/tracing"
 	pb "github.com/johananl/otel-demo/proto/role"
@@ -16,13 +18,27 @@ import (
 	"google.golang.org/grpc"
 )
 
+var roles []string = []string{
+	"coordinator",
+	"manager",
+	"trainer",
+	"dictator",
+	"tamer",
+	"analyst",
+	"engineer",
+	"evangelist",
+}
+
 type server struct {
 	pb.UnimplementedRoleServer
 }
 
 func (s *server) GetRole(ctx context.Context, in *pb.RoleRequest) (*pb.RoleReply, error) {
 	log.Println("Received role request")
-	return &pb.RoleReply{Role: "coordinator"}, nil
+
+	selected := roles[rand.Intn(len(roles))]
+
+	return &pb.RoleReply{Role: selected}, nil
 }
 
 func initTracer() {
@@ -52,6 +68,8 @@ func initTracer() {
 
 func main() {
 	initTracer()
+
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	host := "localhost"
 	port := 9092
