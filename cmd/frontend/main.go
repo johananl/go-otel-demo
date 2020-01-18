@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -17,6 +18,12 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
 )
+
+type Response struct {
+	Seniority string `json:"seniority"`
+	Field     string `json:"field"`
+	Role      string `json:"role"`
+}
 
 func initTracer() {
 	exporter, err := jaeger.NewExporter(
@@ -158,8 +165,21 @@ func main() {
 			}
 		}
 
+		res := Response{
+			Seniority: seniority,
+			Field:     field,
+			Role:      role,
+		}
+
+		j, err := json.Marshal(res)
+		if err != nil {
+			log.Println("Error serializing to JSON")
+			http.Error(w, "Error serializing to JSON", 500)
+			return
+		}
+
 		// Write HTTP response.
-		w.Write([]byte(fmt.Sprintf("%s %s %s\n", seniority, field, role)))
+		w.Write(j)
 	}
 
 	http.HandleFunc("/", fakeTitleHandler)
