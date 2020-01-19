@@ -3,7 +3,13 @@ import './App.css';
 
 class Display extends React.Component {
   render() {
-    if (!this.props.data) {
+    if (!this.props.isLoaded) {
+      return (
+        <div className="spinner-border my-2" role="status">
+          <span className="sr-only">Loading...</span>
+        </div>
+      );
+    } else if (!this.props.data) {
       return (<h1>&nbsp;</h1>);
     } else {
       // Capitalize first letter of each word.
@@ -49,6 +55,7 @@ class MyApp extends React.Component {
 
     this.state = {
       data: null,
+      isLoaded: true,
     };
 
     this.handler = this.handler.bind(this)
@@ -56,16 +63,19 @@ class MyApp extends React.Component {
   }
 
   handler() {
+    this.setState({ isLoaded: false });
     fetch("http://localhost:8080/api")
       .then(res => res.json())
       .then(
         (result) => {
           this.setState({
+            isLoaded: true,
             data: result,
           });
         },
         (error) => {
           this.setState({
+            isLoaded: true,
             error
           });
         }
@@ -73,16 +83,19 @@ class MyApp extends React.Component {
   }
 
   slowHandler() {
+    this.setState({ isLoaded: false });
     fetch("http://localhost:8080/slow-api")
       .then(res => res.json())
       .then(
         (result) => {
           this.setState({
+            isLoaded: true,
             data: result,
           });
         },
         (error) => {
           this.setState({
+            isLoaded: true,
             error
           });
         }
@@ -95,8 +108,10 @@ class MyApp extends React.Component {
       return <div>Error: {error.message}</div>;
     } else {
       return (
-        <div className="App container">
-          <Display data={data} />
+        <div className="App container pt-5">
+          <div className="display-container">
+            <Display data={data} isLoaded={isLoaded} />
+          </div>
           <div className="button-container my-1">
             <Button handler={this.handler} />
           </div>

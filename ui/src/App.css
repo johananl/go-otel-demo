@@ -37,3 +37,11 @@
     transform: rotate(360deg);
   }
 }
+
+.display-container {
+  height: 80px;
+}
+
+h1 {
+  margin: 0;
+}
