@@ -4,7 +4,7 @@ import './App.css';
 class Display extends React.Component {
   render() {
     if (!this.props.data) {
-      return (<p>Click the button to generate fake titles!</p>);
+      return (<h1>&nbsp;</h1>);
     } else {
       // Capitalize first letter of each word.
       const seniority = this.props.data.seniority.charAt(0).toUpperCase()
@@ -66,10 +66,10 @@ class MyApp extends React.Component {
       return <div>Error: {error.message}</div>;
     } else {
       return (
-        <div className="App">
+        <div className="App container">
           <Display data={data} />
           <Button handler={this.handler} />
-        </div>
+        </div >
       );
     }
   }
