@@ -25,9 +25,20 @@ class Button extends React.Component {
   render() {
     return (
       <button
-        className="btn btn-primary"
+        className="btn btn-primary w-50"
         onClick={() => this.props.handler()}
       >Generate Fake Title</button>
+    );
+  }
+}
+
+class SlowButton extends React.Component {
+  render() {
+    return (
+      <button
+        className="btn btn-primary w-50"
+        onClick={() => this.props.handler()}
+      >Generate Fake Title Slowly</button>
     );
   }
 }
@@ -41,10 +52,28 @@ class MyApp extends React.Component {
     };
 
     this.handler = this.handler.bind(this)
+    this.slowHandler = this.slowHandler.bind(this)
   }
 
   handler() {
     fetch("http://localhost:8080/api")
+      .then(res => res.json())
+      .then(
+        (result) => {
+          this.setState({
+            data: result,
+          });
+        },
+        (error) => {
+          this.setState({
+            error
+          });
+        }
+      );
+  }
+
+  slowHandler() {
+    fetch("http://localhost:8080/slow-api")
       .then(res => res.json())
       .then(
         (result) => {
@@ -68,7 +97,12 @@ class MyApp extends React.Component {
       return (
         <div className="App container">
           <Display data={data} />
-          <Button handler={this.handler} />
+          <div className="button-container my-1">
+            <Button handler={this.handler} />
+          </div>
+          <div className="button-container my-1">
+            <SlowButton handler={this.slowHandler} />
+          </div>
         </div >
       );
     }

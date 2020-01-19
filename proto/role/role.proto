@@ -6,7 +6,9 @@ service Role {
   rpc GetRole (RoleRequest) returns (RoleReply) {}
 }
 
-message RoleRequest {}
+message RoleRequest {
+  bool slow = 1;
+}
 
 message RoleReply {
   string role = 1;

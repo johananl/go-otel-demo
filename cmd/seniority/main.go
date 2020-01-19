@@ -34,6 +34,9 @@ type server struct {
 func (s *server) GetSeniority(ctx context.Context, in *pb.SeniorityRequest) (*pb.SeniorityReply, error) {
 	log.Println("Received seniority request")
 
+	if in.Slow {
+		time.Sleep(time.Duration(rand.Intn(300)) * time.Millisecond)
+	}
 	selected := seniorities[rand.Intn(len(seniorities))]
 
 	// Get current span. The span was created within the gRPC interceptor.

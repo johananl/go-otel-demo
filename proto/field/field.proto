@@ -6,7 +6,9 @@ service Field {
   rpc GetField (FieldRequest) returns (FieldReply) {}
 }
 
-message FieldRequest {}
+message FieldRequest {
+  bool slow = 1;
+}
 
 message FieldReply {
   string field = 1;

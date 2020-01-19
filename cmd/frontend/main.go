@@ -184,12 +184,69 @@ func main() {
 		w.Write(j)
 	}
 
+	slowAPIHandler := func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := tr.Start(r.Context(), "serve-http-request-slowly")
+		defer span.End()
+
+		var seniority string
+		var field string
+		var role string
+
+		// Get seniority.
+		sr, err := seniorityClient.GetSeniority(ctx, &senioritypb.SeniorityRequest{Slow: true})
+		if err != nil {
+			log.Printf("getting seniority: %v", err)
+			http.Error(w, "Error from seniority service", 500)
+			return
+		}
+		seniority = sr.Seniority
+
+		// Get field.
+		fr, err := fieldClient.GetField(ctx, &fieldpb.FieldRequest{Slow: true})
+		if err != nil {
+			log.Printf("getting field: %v", err)
+			http.Error(w, "Error from field service", 500)
+			return
+		}
+		field = fr.Field
+
+		// Get role.
+		rr, err := roleClient.GetRole(ctx, &rolepb.RoleRequest{Slow: true})
+		if err != nil {
+			log.Printf("getting field: %v", err)
+			http.Error(w, "Error from field service", 500)
+			return
+		}
+		role = rr.Role
+
+		res := Response{
+			Seniority: seniority,
+			Field:     field,
+			Role:      role,
+		}
+
+		j, err := json.Marshal(res)
+		if err != nil {
+			log.Println("Error serializing to JSON")
+			http.Error(w, "Error serializing to JSON", 500)
+			return
+		}
+
+		span.AddEvent(ctx, "Generating response", key.New("response").String(string(j)))
+
+		// Write HTTP response.
+		w.Write(j)
+	}
+
 	// Handle static content (for UI).
 	fs := http.FileServer(http.Dir("ui/build"))
 	http.Handle("/", fs)
 
 	// Handle API.
 	http.HandleFunc("/api", apiHandler)
+
+	// Handle API slowly.
+	http.HandleFunc("/slow-api", slowAPIHandler)
 
 	addr := fmt.Sprintf("%s:%d", host, port)
 	ch := make(chan struct{})

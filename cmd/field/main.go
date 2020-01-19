@@ -41,6 +41,10 @@ type server struct {
 
 func (s *server) GetField(ctx context.Context, in *pb.FieldRequest) (*pb.FieldReply, error) {
 	log.Println("Received field request")
+
+	if in.Slow {
+		time.Sleep(time.Duration(rand.Intn(300)) * time.Millisecond)
+	}
 	selected := fields[rand.Intn(len(fields))]
 
 	// Get current span. The span was created within the gRPC interceptor.

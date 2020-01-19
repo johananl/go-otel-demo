@@ -39,6 +39,9 @@ type server struct {
 func (s *server) GetRole(ctx context.Context, in *pb.RoleRequest) (*pb.RoleReply, error) {
 	log.Println("Received role request")
 
+	if in.Slow {
+		time.Sleep(time.Duration(rand.Intn(300)) * time.Millisecond)
+	}
 	selected := roles[rand.Intn(len(roles))]
 
 	// Get current span. The span was created within the gRPC interceptor.
