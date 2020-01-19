@@ -25,6 +25,11 @@ var seniorities []string = []string{
 	"assistant",
 	"executive",
 	"intergalactic",
+	"lead",
+	"corporate",
+	"regional",
+	"principal",
+	"chief",
 }
 
 type server struct {
