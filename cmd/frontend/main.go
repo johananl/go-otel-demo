@@ -178,6 +178,8 @@ func main() {
 			return
 		}
 
+		span.AddEvent(ctx, "Generating response", key.New("response").String(string(j)))
+
 		// Write HTTP response.
 		w.Write(j)
 	}

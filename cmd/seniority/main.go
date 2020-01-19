@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/jaeger"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
@@ -32,7 +33,13 @@ type server struct {
 
 func (s *server) GetSeniority(ctx context.Context, in *pb.SeniorityRequest) (*pb.SeniorityReply, error) {
 	log.Println("Received seniority request")
+
 	selected := seniorities[rand.Intn(len(seniorities))]
+
+	// Get current span. The span was created within the gRPC interceptor.
+	// We are just adding data to it here.
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(ctx, "Selected seniority", key.New("seniority").String(selected))
 
 	return &pb.SeniorityReply{Seniority: selected}, nil
 }

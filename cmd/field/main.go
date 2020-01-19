@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/jaeger"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
@@ -40,8 +41,12 @@ type server struct {
 
 func (s *server) GetField(ctx context.Context, in *pb.FieldRequest) (*pb.FieldReply, error) {
 	log.Println("Received field request")
-
 	selected := fields[rand.Intn(len(fields))]
+
+	// Get current span. The span was created within the gRPC interceptor.
+	// We are just adding data to it here.
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(ctx, "Selected field", key.New("field").String(selected))
 
 	return &pb.FieldReply{Field: selected}, nil
 }

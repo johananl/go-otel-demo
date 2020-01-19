@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/api/core"
 	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/key"
+	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/exporter/trace/jaeger"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
@@ -39,6 +40,11 @@ func (s *server) GetRole(ctx context.Context, in *pb.RoleRequest) (*pb.RoleReply
 	log.Println("Received role request")
 
 	selected := roles[rand.Intn(len(roles))]
+
+	// Get current span. The span was created within the gRPC interceptor.
+	// We are just adding data to it here.
+	span := trace.SpanFromContext(ctx)
+	span.AddEvent(ctx, "Selected role", key.New("role").String(selected))
 
 	return &pb.RoleReply{Role: selected}, nil
 }
