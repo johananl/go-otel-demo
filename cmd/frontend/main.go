@@ -103,7 +103,7 @@ func main() {
 	roleClient := rolepb.NewRoleClient(rConn)
 	log.Printf("Connected to role service at %s:%d\n", roleHost, rolePort)
 
-	fakeTitleHandler := func(w http.ResponseWriter, r *http.Request) {
+	apiHandler := func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := tr.Start(r.Context(), "serve-http-request")
 		defer span.End()
 
@@ -182,7 +182,12 @@ func main() {
 		w.Write(j)
 	}
 
-	http.HandleFunc("/", fakeTitleHandler)
+	// Handle static content (for UI).
+	fs := http.FileServer(http.Dir("ui/build"))
+	http.Handle("/", fs)
+
+	// Handle API.
+	http.HandleFunc("/api", apiHandler)
 
 	addr := fmt.Sprintf("%s:%d", host, port)
 	ch := make(chan struct{})
