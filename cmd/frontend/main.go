@@ -115,120 +115,106 @@ func main() {
 		var seniority string
 		var field string
 		var role string
+		var res Response
 
-		errChan := make(chan error)
+		slow := r.URL.Query().Get("slow")
+		if slow != "" {
+			// Handle request slowly.
 
-		// Get seniority.
-		sChan := make(chan *senioritypb.SeniorityReply)
-		go func(reply chan<- *senioritypb.SeniorityReply, errChan chan<- error) {
-			r, err := seniorityClient.GetSeniority(ctx, &senioritypb.SeniorityRequest{})
+			// Get seniority.
+			sr, err := seniorityClient.GetSeniority(ctx, &senioritypb.SeniorityRequest{Slow: true})
 			if err != nil {
-				errChan <- fmt.Errorf("getting seniority: %v", err)
+				log.Printf("getting seniority: %v", err)
+				http.Error(w, "Error from seniority service", 500)
 				return
 			}
+			seniority = sr.Seniority
 
-			reply <- r
-		}(sChan, errChan)
-
-		// Get field.
-		fChan := make(chan *fieldpb.FieldReply)
-		go func(reply chan<- *fieldpb.FieldReply, errChan chan<- error) {
-			r, err := fieldClient.GetField(ctx, &fieldpb.FieldRequest{})
+			// Get field.
+			fr, err := fieldClient.GetField(ctx, &fieldpb.FieldRequest{Slow: true})
 			if err != nil {
-				errChan <- fmt.Errorf("getting field: %v", err)
+				log.Printf("getting field: %v", err)
+				http.Error(w, "Error from field service", 500)
 				return
 			}
+			field = fr.Field
 
-			reply <- r
-		}(fChan, errChan)
-
-		// Get role.
-		rChan := make(chan *rolepb.RoleReply)
-		go func(reply chan<- *rolepb.RoleReply, errChan chan<- error) {
-			r, err := roleClient.GetRole(ctx, &rolepb.RoleRequest{})
+			// Get role.
+			rr, err := roleClient.GetRole(ctx, &rolepb.RoleRequest{Slow: true})
 			if err != nil {
-				errChan <- fmt.Errorf("getting role: %v", err)
+				log.Printf("getting field: %v", err)
+				http.Error(w, "Error from field service", 500)
 				return
 			}
+			role = rr.Role
 
-			reply <- r
-		}(rChan, errChan)
-
-		// Wait for all gRPC calls to return.
-		for seniority == "" || field == "" || role == "" {
-			select {
-			case sr := <-sChan:
-				seniority = sr.Seniority
-			case fr := <-fChan:
-				field = fr.Field
-			case rr := <-rChan:
-				role = rr.Role
-			case err := <-errChan:
-				log.Printf("gRPC error: %v", err)
-				http.Error(w, "Error from backend service", 500)
-				return
+			res = Response{
+				Seniority: seniority,
+				Field:     field,
+				Role:      role,
 			}
-		}
+		} else {
+			// Handle request quickly.
 
-		res := Response{
-			Seniority: seniority,
-			Field:     field,
-			Role:      role,
-		}
+			errChan := make(chan error)
 
-		j, err := json.Marshal(res)
-		if err != nil {
-			log.Println("Error serializing to JSON")
-			http.Error(w, "Error serializing to JSON", 500)
-			return
-		}
+			// Get seniority.
+			sChan := make(chan *senioritypb.SeniorityReply)
+			go func(reply chan<- *senioritypb.SeniorityReply, errChan chan<- error) {
+				r, err := seniorityClient.GetSeniority(ctx, &senioritypb.SeniorityRequest{})
+				if err != nil {
+					errChan <- fmt.Errorf("getting seniority: %v", err)
+					return
+				}
 
-		span.AddEvent(ctx, "Generating response", key.New("response").String(string(j)))
+				reply <- r
+			}(sChan, errChan)
 
-		// Write HTTP response.
-		w.Write(j)
-	}
+			// Get field.
+			fChan := make(chan *fieldpb.FieldReply)
+			go func(reply chan<- *fieldpb.FieldReply, errChan chan<- error) {
+				r, err := fieldClient.GetField(ctx, &fieldpb.FieldRequest{})
+				if err != nil {
+					errChan <- fmt.Errorf("getting field: %v", err)
+					return
+				}
 
-	// Slow API handler function.
-	slowAPIHandler := func(w http.ResponseWriter, r *http.Request) {
-		ctx, span := tr.Start(r.Context(), "serve-http-request-slowly")
-		defer span.End()
+				reply <- r
+			}(fChan, errChan)
 
-		var seniority string
-		var field string
-		var role string
+			// Get role.
+			rChan := make(chan *rolepb.RoleReply)
+			go func(reply chan<- *rolepb.RoleReply, errChan chan<- error) {
+				r, err := roleClient.GetRole(ctx, &rolepb.RoleRequest{})
+				if err != nil {
+					errChan <- fmt.Errorf("getting role: %v", err)
+					return
+				}
 
-		// Get seniority.
-		sr, err := seniorityClient.GetSeniority(ctx, &senioritypb.SeniorityRequest{Slow: true})
-		if err != nil {
-			log.Printf("getting seniority: %v", err)
-			http.Error(w, "Error from seniority service", 500)
-			return
-		}
-		seniority = sr.Seniority
+				reply <- r
+			}(rChan, errChan)
 
-		// Get field.
-		fr, err := fieldClient.GetField(ctx, &fieldpb.FieldRequest{Slow: true})
-		if err != nil {
-			log.Printf("getting field: %v", err)
-			http.Error(w, "Error from field service", 500)
-			return
-		}
-		field = fr.Field
+			// Wait for all gRPC calls to return.
+			for seniority == "" || field == "" || role == "" {
+				select {
+				case sr := <-sChan:
+					seniority = sr.Seniority
+				case fr := <-fChan:
+					field = fr.Field
+				case rr := <-rChan:
+					role = rr.Role
+				case err := <-errChan:
+					log.Printf("gRPC error: %v", err)
+					http.Error(w, "Error from backend service", 500)
+					return
+				}
+			}
 
-		// Get role.
-		rr, err := roleClient.GetRole(ctx, &rolepb.RoleRequest{Slow: true})
-		if err != nil {
-			log.Printf("getting field: %v", err)
-			http.Error(w, "Error from field service", 500)
-			return
-		}
-		role = rr.Role
-
-		res := Response{
-			Seniority: seniority,
-			Field:     field,
-			Role:      role,
+			res = Response{
+				Seniority: seniority,
+				Field:     field,
+				Role:      role,
+			}
 		}
 
 		j, err := json.Marshal(res)
@@ -250,9 +236,6 @@ func main() {
 
 	// Handle API.
 	http.HandleFunc("/api", apiHandler)
-
-	// Handle API slowly.
-	http.HandleFunc("/slow-api", slowAPIHandler)
 
 	addr := fmt.Sprintf("%s:%d", host, port)
 	ch := make(chan struct{})
