@@ -25,7 +25,8 @@ type Response struct {
 	Role      string `json:"role"`
 }
 
-func initTracer() {
+func initTraceProvider() {
+	// Create a Jaeger exporter.
 	exporter, err := jaeger.NewExporter(
 		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
 		jaeger.WithProcess(jaeger.Process{
@@ -39,6 +40,8 @@ func initTracer() {
 		log.Fatal(err)
 	}
 
+	// Create a trace provider.
+	// The provider creates a tracer and plugs in the exporter to it.
 	tp, err := sdktrace.NewProvider(
 		sdktrace.WithConfig(sdktrace.Config{DefaultSampler: sdktrace.AlwaysSample()}),
 		sdktrace.WithSyncer(exporter),
@@ -47,11 +50,12 @@ func initTracer() {
 		log.Fatal(err)
 	}
 
+	// Register the trace provider.
 	global.SetTraceProvider(tp)
 }
 
 func main() {
-	initTracer()
+	initTraceProvider()
 	tr := global.TraceProvider().Tracer("frontend")
 
 	host := "localhost"
@@ -103,6 +107,7 @@ func main() {
 	roleClient := rolepb.NewRoleClient(rConn)
 	log.Printf("Connected to role service at %s:%d\n", roleHost, rolePort)
 
+	// API handler function.
 	apiHandler := func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := tr.Start(r.Context(), "serve-http-request")
 		defer span.End()
@@ -184,6 +189,7 @@ func main() {
 		w.Write(j)
 	}
 
+	// Slow API handler function.
 	slowAPIHandler := func(w http.ResponseWriter, r *http.Request) {
 		ctx, span := tr.Start(r.Context(), "serve-http-request-slowly")
 		defer span.End()
