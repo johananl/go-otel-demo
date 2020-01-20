@@ -3,7 +3,6 @@ package tracing
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/api/global"
 	"go.opentelemetry.io/otel/api/trace"
 	"go.opentelemetry.io/otel/plugin/grpctrace"
 	"google.golang.org/grpc"
@@ -17,16 +16,11 @@ func UnaryClientInterceptor(ctx context.Context, method string, req, reply inter
 	requestMetadata, _ := metadata.FromOutgoingContext(ctx)
 	metadataCopy := requestMetadata.Copy()
 
-	tr := global.TraceProvider().Tracer("frontend")
-	err := tr.WithSpan(ctx, "send-grpc-request",
-		func(ctx context.Context) error {
-			grpctrace.Inject(ctx, &metadataCopy)
-			ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
+	grpctrace.Inject(ctx, &metadataCopy)
+	ctx = metadata.NewOutgoingContext(ctx, metadataCopy)
 
-			err := invoker(ctx, method, req, reply, cc, opts...)
-			setTraceStatus(ctx, err)
-			return err
-		})
+	err := invoker(ctx, method, req, reply, cc, opts...)
+	setTraceStatus(ctx, err)
 
 	return err
 }
