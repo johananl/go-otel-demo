@@ -13,6 +13,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var tr = global.TraceProvider().Tracer("field")
+
 // UnaryServerInterceptor intercepts and extracts incoming trace data.
 func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	requestMetadata, _ := metadata.FromIncomingContext(ctx)
@@ -23,7 +25,6 @@ func UnaryServerInterceptor(ctx context.Context, req interface{}, info *grpc.Una
 		MultiKV: entries,
 	}))
 
-	tr := global.TraceProvider().Tracer("field")
 	ctx, span := tr.Start(
 		ctx,
 		"handle-grpc-request",
