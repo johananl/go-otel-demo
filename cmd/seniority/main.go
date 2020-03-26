@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"os"
 	"time"
 
 	"github.com/johananl/otel-demo/pkg/seniority/tracing"
@@ -52,10 +53,10 @@ func (s *server) GetSeniority(ctx context.Context, in *pb.SeniorityRequest) (*pb
 	return &pb.SeniorityReply{Seniority: selected}, nil
 }
 
-func initTraceProvider() {
+func initTraceProvider(jaegerHost, jaegerPort string) {
 	// Create a Jaeger exporter.
 	exporter, err := jaeger.NewExporter(
-		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		jaeger.WithCollectorEndpoint(fmt.Sprintf("http://%s:%s/api/traces", jaegerHost, jaegerPort)),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "seniority",
 			Tags: []core.KeyValue{
@@ -81,14 +82,26 @@ func initTraceProvider() {
 	global.SetTraceProvider(tp)
 }
 
-func main() {
-	initTraceProvider()
+func getenv(key, fallback string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return fallback
+	}
+	return value
+}
 
+func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	host := "localhost"
-	port := 9090
-	addr := fmt.Sprintf("%s:%d", host, port)
+	host := getenv("SENIORITY_HOST", "localhost")
+	port := getenv("SENIORITY_PORT", "9090")
+
+	jaegerHost := getenv("SENIORITY_JAEGER_HOST", "localhost")
+	jaegerPort := getenv("SENIORITY_JAEGER_PORT", "14268")
+
+	initTraceProvider(jaegerHost, jaegerPort)
+
+	addr := fmt.Sprintf("%s:%s", host, port)
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -104,7 +117,7 @@ func main() {
 		}
 		ch <- struct{}{}
 	}(ch)
-	log.Printf("Listening for gRPC connections on port %d", port)
+	log.Printf("Listening for gRPC connections on port %s", port)
 
 	<-ch
 }

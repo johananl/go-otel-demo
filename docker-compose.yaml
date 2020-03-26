@@ -1,0 +1,52 @@
+version: "3.7"
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.6
+    environment:
+      COLLECTOR_ZIPKIN_HTTP_PORT: 9411
+    ports:
+    - 16686:16686
+  seniority:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-seniority
+    depends_on:
+    - jaeger
+    environment:
+      SENIORITY_HOST: 0.0.0.0
+      SENIORITY_JAEGER_HOST: jaeger
+  field:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-field
+    depends_on:
+    - jaeger
+    environment:
+      FIELD_HOST: 0.0.0.0
+      FIELD_JAEGER_HOST: jaeger
+  role:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-role
+    depends_on:
+    - jaeger
+    environment:
+      ROLE_HOST: 0.0.0.0
+      ROLE_JAEGER_HOST: jaeger
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile-frontend
+    depends_on:
+    - jaeger
+    - seniority
+    - field
+    - role
+    environment:
+      FRONTEND_HOST: 0.0.0.0
+      FRONTEND_SENIORITY_HOST: seniority
+      FRONTEND_FIELD_HOST: field
+      FRONTEND_ROLE_HOST: role
+      FRONTEND_JAEGER_HOST: jaeger
+    ports:
+    - 8080:8080

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/johananl/otel-demo/pkg/frontend/tracing"
@@ -25,10 +27,10 @@ type Response struct {
 	Role      string `json:"role"`
 }
 
-func initTraceProvider() {
+func initTraceProvider(jaegerHost, jaegerPort string) {
 	// Create a Jaeger exporter.
 	exporter, err := jaeger.NewExporter(
-		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		jaeger.WithCollectorEndpoint(fmt.Sprintf("http://%s:%s/api/traces", jaegerHost, jaegerPort)),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "frontend",
 			Tags: []core.KeyValue{
@@ -54,23 +56,37 @@ func initTraceProvider() {
 	global.SetTraceProvider(tp)
 }
 
+func getenv(key, fallback string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return fallback
+	}
+	return value
+}
+
 func main() {
-	initTraceProvider()
+	host := getenv("FRONTEND_HOST", "localhost")
+	port, err := strconv.Atoi(getenv("FRONTEND_PORT", "8080"))
+	if err != nil {
+		log.Fatalf("Invalid port %q", port)
+	}
+
+	jaegerHost := getenv("FRONTEND_JAEGER_HOST", "localhost")
+	jaegerPort := getenv("FRONTEND_JAEGER_PORT", "14268")
+
+	seniorityHost := getenv("FRONTEND_SENIORITY_HOST", "localhost")
+	seniorityPort := getenv("FRONTEND_SENIORITY_PORT", "9090")
+	fieldHost := getenv("FRONTEND_FIELD_HOST", "localhost")
+	fieldPort := getenv("FRONTEND_FIELD_PORT", "9091")
+	roleHost := getenv("FRONTEND_ROLE_HOST", "localhost")
+	rolePort := getenv("FRONTEND_ROLE_PORT", "9092")
+
+	initTraceProvider(jaegerHost, jaegerPort)
 	tr := global.TraceProvider().Tracer("frontend")
-
-	host := "localhost"
-	port := 8080
-
-	seniorityHost := "localhost"
-	seniorityPort := 9090
-	fieldHost := "localhost"
-	fieldPort := 9091
-	roleHost := "localhost"
-	rolePort := 9092
 
 	// Connect to seniority service.
 	sConn, err := grpc.Dial(
-		fmt.Sprintf("%s:%d", seniorityHost, seniorityPort),
+		fmt.Sprintf("%s:%s", seniorityHost, seniorityPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
 		grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor),
 	)
@@ -79,11 +95,11 @@ func main() {
 	}
 	defer sConn.Close()
 	seniorityClient := senioritypb.NewSeniorityClient(sConn)
-	log.Printf("Connected to seniority service at %s:%d\n", seniorityHost, seniorityPort)
+	log.Printf("Connected to seniority service at %s:%s\n", seniorityHost, seniorityPort)
 
 	// Connect to field service.
 	fConn, err := grpc.Dial(
-		fmt.Sprintf("%s:%d", fieldHost, fieldPort),
+		fmt.Sprintf("%s:%s", fieldHost, fieldPort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
 		grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor),
 	)
@@ -92,11 +108,11 @@ func main() {
 	}
 	defer fConn.Close()
 	fieldClient := fieldpb.NewFieldClient(fConn)
-	log.Printf("Connected to field service at %s:%d\n", fieldHost, fieldPort)
+	log.Printf("Connected to field service at %s:%s\n", fieldHost, fieldPort)
 
 	// Connect to role service.
 	rConn, err := grpc.Dial(
-		fmt.Sprintf("%s:%d", roleHost, rolePort),
+		fmt.Sprintf("%s:%s", roleHost, rolePort),
 		grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second),
 		grpc.WithUnaryInterceptor(tracing.UnaryClientInterceptor),
 	)
@@ -105,7 +121,7 @@ func main() {
 	}
 	defer rConn.Close()
 	roleClient := rolepb.NewRoleClient(rConn)
-	log.Printf("Connected to role service at %s:%d\n", roleHost, rolePort)
+	log.Printf("Connected to role service at %s:%s\n", roleHost, rolePort)
 
 	// API handler function.
 	apiHandler := func(w http.ResponseWriter, r *http.Request) {

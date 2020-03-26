@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"os"
 	"time"
 
 	"github.com/johananl/otel-demo/pkg/role/tracing"
@@ -55,10 +56,10 @@ func (s *server) GetRole(ctx context.Context, in *pb.RoleRequest) (*pb.RoleReply
 	return &pb.RoleReply{Role: selected}, nil
 }
 
-func initTraceProvider() {
+func initTraceProvider(jaegerHost, jaegerPort string) {
 	// Create a Jaeger exporter.
 	exporter, err := jaeger.NewExporter(
-		jaeger.WithCollectorEndpoint("http://localhost:14268/api/traces"),
+		jaeger.WithCollectorEndpoint(fmt.Sprintf("http://%s:%s/api/traces", jaegerHost, jaegerPort)),
 		jaeger.WithProcess(jaeger.Process{
 			ServiceName: "role",
 			Tags: []core.KeyValue{
@@ -84,14 +85,26 @@ func initTraceProvider() {
 	global.SetTraceProvider(tp)
 }
 
-func main() {
-	initTraceProvider()
+func getenv(key, fallback string) string {
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		return fallback
+	}
+	return value
+}
 
+func main() {
 	rand.Seed(time.Now().UTC().UnixNano())
 
-	host := "localhost"
-	port := 9092
-	addr := fmt.Sprintf("%s:%d", host, port)
+	host := getenv("ROLE_HOST", "localhost")
+	port := getenv("ROLE_PORT", "9092")
+
+	jaegerHost := getenv("ROLE_JAEGER_HOST", "localhost")
+	jaegerPort := getenv("ROLE_JAEGER_PORT", "14268")
+
+	initTraceProvider(jaegerHost, jaegerPort)
+
+	addr := fmt.Sprintf("%s:%s", host, port)
 
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -107,7 +120,7 @@ func main() {
 		}
 		ch <- struct{}{}
 	}(ch)
-	log.Printf("Listening for gRPC connections on port %d", port)
+	log.Printf("Listening for gRPC connections on port %s", port)
 
 	<-ch
 }
