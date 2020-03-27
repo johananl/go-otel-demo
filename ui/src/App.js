@@ -62,7 +62,7 @@ class MyApp extends React.Component {
   }
 
   handler(slow) {
-    let url = "http://localhost:8080/api"
+    let url = "http://localhost/api"
     if (slow) {
       url += "?slow=true"
     }

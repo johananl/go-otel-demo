@@ -48,5 +48,15 @@ services:
       FRONTEND_FIELD_HOST: field
       FRONTEND_ROLE_HOST: role
       FRONTEND_JAEGER_HOST: jaeger
+  caddy:
+    image: abiosoft/caddy
+    depends_on:
+    - frontend
+    environment:
+      CADDYPATH: /etc/caddy/certs
+      # ACME_AGREE: "true"
+    volumes:
+    - ./Caddyfile:/etc/Caddyfile
+    - ./ui/build:/srv
     ports:
-    - 8080:8080
+    - "80:80"
